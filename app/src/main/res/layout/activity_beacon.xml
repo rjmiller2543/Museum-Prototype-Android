@@ -35,21 +35,11 @@
 
         />
 
-    <TabWidget
-        android:id="@android:id/tabs"
-        android:layout_width="@dimen/activity_vertical_margin"
-        android:layout_height="@dimen/activity_vertical_margin"
-        >
-        </TabWidget>
-
-    <android.support.v4.view.ViewPager
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        android:id="@+id/pager"
+    <ImageView
+        android:id="@+id/ArtworkImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@+id/ArtistName"
-        android:paddingTop="10dp"
-        android:background="#FFFFFF"
         />
 
 
