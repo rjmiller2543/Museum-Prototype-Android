@@ -50,6 +50,9 @@ public class BeaconActivity extends Activity implements BeaconConsumer {
 
     protected static final String TAG = "BeaconActivity";
     private BeaconManager beaconManager = BeaconManager.getInstanceForApplication(this);
+    private boolean entryFlag = true;
+    private int currMajor;
+    private int currMinor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -139,6 +142,9 @@ public class BeaconActivity extends Activity implements BeaconConsumer {
                         message += " and a major: "+tempBeacon.getId2();
                         message += " and a minor: "+tempBeacon.getId3();
                         Log.d(TAG, message);
+                        if ((tempBeacon.getId2() != currMajor) && (tempBeacon.getId3() != currMinor) && (entryFlag == true) && (tempBeacon.getTxPower() > -65)) {
+                            Toast.makeText(getApplicationContext(), "Found a new beacon!", Toast.LENGTH_LONG).show();
+                        }
                     }
                     //Log.i(TAG, "The first beacon I see is about " + beacons.iterator().next().getDistance() + " meters away.");
                     //Log.i(TAG, "It has an id major: " + beacons.iterator().next().getId2());
