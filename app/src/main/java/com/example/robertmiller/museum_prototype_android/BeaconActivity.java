@@ -1,7 +1,10 @@
 package com.example.robertmiller.museum_prototype_android;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
+import android.preference.DialogPreference;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -44,21 +47,34 @@ import org.altbeacon.beacon.Beacon;
 import org.altbeacon.beacon.AltBeacon;
 
 import java.util.Collection;
+import java.util.List;
 
 
-public class BeaconActivity extends Activity implements BeaconConsumer {
+public class BeaconActivity extends FragmentActivity implements BeaconConsumer {
 
     protected static final String TAG = "BeaconActivity";
     private BeaconManager beaconManager = BeaconManager.getInstanceForApplication(this);
     private boolean entryFlag = true;
     private int currMajor;
     private int currMinor;
+    BeaconFragmentAdapter fragmentPagerAdapter;
+    private FragmentActivity context;
+    private BeaconActivity thisBeaconActivity = this;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_beacon);
         Log.d(TAG,"In the onCreate");
+
+        //context = (FragmentActivity)Activity.this.getCallingActivity();
+        //context = (FragmentActivity)this.getCallingActivity();
+        ViewPager viewPager = (ViewPager)findViewById(R.id.ViewPager);
+        //fragmentPagerAdapter = new BeaconFragmentAdapter(context.getSupportFragmentManager());
+        viewPager.setOffscreenPageLimit(4);
+        fragmentPagerAdapter = new BeaconFragmentAdapter(this.getSupportFragmentManager());
+        viewPager.setAdapter(fragmentPagerAdapter);
+
         Parse.initialize(this, "dt8scpzoFbw0fcPKnBdm8dodp0fSrf0yKHdparxi", "evAg7d6eqnq6ttYLHeH868OUsEdQQVkUWfRPjEMI");
         //beaconManager = BeaconManager.getInstanceForApplication(this);
         //beaconManager.bind(this);
@@ -73,6 +89,17 @@ public class BeaconActivity extends Activity implements BeaconConsumer {
             beaconManager.startRangingBeaconsInRegion(region);
         } catch (RemoteException e) {   }
 
+       /* final  AlertDialog alertDialog = new AlertDialog.Builder(this).create();
+        alertDialog.setTitle("up up");
+        alertDialog.setMessage("does this shit work at all?");
+        alertDialog.setButton(0, "OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                alertDialog.dismiss();
+            }
+        });
+        alertDialog.show();
+*/
         ParseQuery<ParseObject> query = ParseQuery.getQuery("Artwork");
         query.getInBackground("iTJRCi84yA", new GetCallback<ParseObject>() {
             public void done(ParseObject object, ParseException e) {
@@ -86,9 +113,11 @@ public class BeaconActivity extends Activity implements BeaconConsumer {
                     artwortImageFile.getDataInBackground(new GetDataCallback() {
                         @Override
                         public void done(byte[] bytes, ParseException e) {
-                            ImageView iv = (ImageView)findViewById(R.id.ArtworkImage);
+                            //ImageView iv = (ImageView)findViewById(R.id.imageFragImageView);
                             Bitmap bitmap = BitmapFactory.decodeByteArray(bytes,0,bytes.length);
-                            iv.setImageBitmap(bitmap);
+                            //iv.setImageBitmap(bitmap);
+                            //fragmentPagerAdapter
+                            fragmentPagerAdapter.artworkImagePage.setImageView(bitmap);
                         }
                     }, new ProgressCallback() {
                         @Override
@@ -142,8 +171,76 @@ public class BeaconActivity extends Activity implements BeaconConsumer {
                         message += " and a major: "+tempBeacon.getId2();
                         message += " and a minor: "+tempBeacon.getId3();
                         Log.d(TAG, message);
-                        if ((tempBeacon.getId2() != currMajor) && (tempBeacon.getId3() != currMinor) && (entryFlag == true) && (tempBeacon.getTxPower() > -65)) {
+                        if ((tempBeacon.getId2().toInt() != currMajor) && (tempBeacon.getId3().toInt() != currMinor) && (entryFlag == true) && (tempBeacon.getTxPower() > -65)) {
+                            currMajor = tempBeacon.getId2().toInt();
+                            currMinor = tempBeacon.getId3().toInt();
                             Toast.makeText(getApplicationContext(), "Found a new beacon!", Toast.LENGTH_LONG).show();
+
+                            ParseQuery<ParseObject> query = ParseQuery.getQuery("Artwork");
+                            query.whereEqualTo("major", tempBeacon.getId2().toInt());
+                            query.whereEqualTo("minor", tempBeacon.getId3().toInt());
+                            query.getFirstInBackground(new GetCallback<ParseObject>() {
+                                public void done(ParseObject object, ParseException e) {
+                                    if (e == null) {
+                                        // object will be your game score
+                                        TextView tv = (TextView)findViewById(R.id.Artwork);
+                                        String MuseumName = object.getString("artWork");
+                                        tv.setText(MuseumName);
+
+                                        TextView artistNameView = (TextView)findViewById(R.id.ArtistName);
+                                        String ArtistName = object.getString("artistName");
+                                        artistNameView.setText(ArtistName);
+
+                                        ParseFile artwortImageFile = object.getParseFile("piecePicture");
+                                        artwortImageFile.getDataInBackground(new GetDataCallback() {
+                                            @Override
+                                            public void done(byte[] bytes, ParseException e) {
+                                                //ImageView iv = (ImageView)findViewById(R.id.imageFragImageView);
+                                                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes,0,bytes.length);
+                                                //iv.setImageBitmap(bitmap);
+                                                //fragmentPagerAdapter
+                                                fragmentPagerAdapter.artworkImagePage.setImageView(bitmap);
+                                            }
+                                        }, new ProgressCallback() {
+                                            @Override
+                                            public void done(Integer integer) {
+
+                                            }
+                                        });
+                                        ParseFile artistImageFile = object.getParseFile("artistPicture");
+                                        artistImageFile.getDataInBackground(new GetDataCallback() {
+                                            @Override
+                                            public void done(byte[] bytes, ParseException e) {
+                                                Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                                                fragmentPagerAdapter.artistImagePage.setImageView(bitmap);
+                                            }
+                                        });
+                                    } else {
+                                        // something went wrong
+                                        Log.d(TAG, "something's gone wrong with the parse download...");
+                                    }
+                                }
+                            });
+
+                           /* AlertDialog.Builder builder = new AlertDialog.Builder(thisBeaconActivity);
+                            builder.setTitle("New Beacon!");
+                            builder.setMessage("Do you want to see the new beacon??");
+                            builder.setPositiveButton("Yeah!", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    // Query Parse for the Major and Minor
+                                    dialogInterface.dismiss();
+                                }
+                            });
+                            builder.setNegativeButton("Nah..", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    // Do nothing
+                                    dialogInterface.dismiss();
+                                }
+                            });
+                            AlertDialog alert = builder.create();
+                            alert.show(); */
                         }
                     }
                     //Log.i(TAG, "The first beacon I see is about " + beacons.iterator().next().getDistance() + " meters away.");
@@ -176,6 +273,62 @@ public class BeaconActivity extends Activity implements BeaconConsumer {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    public class BeaconFragmentAdapter extends android.support.v4.app.FragmentPagerAdapter {
+        private int NUM_ITEMS = 4;
+        public ImageFragment artworkImagePage;
+        private TextFragment artworkDescPage;
+        private ImageFragment artistImagePage;
+        private TextFragment artistDescPage;
+
+        public BeaconFragmentAdapter(FragmentManager fragmentManager) {
+            super(fragmentManager);
+        }
+
+        public int getCount() {
+            return NUM_ITEMS;
+        }
+
+        @Override
+        public android.support.v4.app.Fragment getItem(int position) {
+            switch (position) {
+                case 0:
+                    artworkImagePage = ArtworkImageFragment.newInstance(0, "Artwork");
+                    return artworkImagePage;
+                case 1:
+                    artworkDescPage = ArtworkDescFragment.newInstance(1, "Artwork Description");
+                    return artworkDescPage;
+                case 2:
+                    artistImagePage = ArtistImageFragment.newInstance(2, "Artist");
+                    return artistImagePage;
+                case 3:
+                    artistDescPage = ArtistDescFragment.newInstance(3, "Artist Description");
+                    return artistDescPage;
+                default:
+                    return null;
+            }
+        }
+
+        @Override
+        public CharSequence getPageTitle(int position) {
+            switch (position) {
+                case 0:
+                    return "Artwork";
+                case 1:
+                    return "Artwork Description";
+                case 2:
+                    return "Artist";
+                case 3:
+                    return "Artist Description";
+                default:
+                    return null;
+            }
+        }
+
+        public void setArtworkImage(Bitmap bmp) {
+            artworkImagePage.setImageView(bmp);
+        }
     }
 }
 
